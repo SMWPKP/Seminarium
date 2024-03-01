@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "936565713332",
+    "project_id": "seminarium-ecc72",
+    "storage_bucket": "seminarium-ecc72.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:936565713332:android:d6aa3eada05228eb87aae1",
+        "android_client_info": {
+          "package_name": "com.studia.seminarium"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCDvzpls9y-bE1FYmNAFgP5j8iZRfRnON0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
