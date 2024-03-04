@@ -5,6 +5,7 @@ import 'package:seminarium/providers/plans_provider.dart' as plansProviderAlias;
 import 'package:seminarium/screens/plans/add_exercise_screen.dart';
 import 'package:seminarium/screens/plans/edit_exercise_screen.dart';
 import 'package:seminarium/screens/plans/plans.dart';
+import 'package:seminarium/screens/plans/wolt_add_exercise_screen.dart';
 
 class Exercise {
   final String name;
@@ -72,14 +73,7 @@ class _PlansDayState extends ConsumerState<PlansDay> {
           ? Center(
               child: ElevatedButton(
                 child: const Text('Dodaj ćwiczenie'),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => AddExerciseScreen(
-                            exercise: Exercise(name: '', description: ''))),
-                  );
-                },
+                onPressed: () => WoltAddExercise.show(context, ref)
               ),
             )
           : Padding(
@@ -145,14 +139,7 @@ class _PlansDayState extends ConsumerState<PlansDay> {
                   ),
                   ElevatedButton(
                     child: Text('Dodaj ćwiczenie'),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => AddExerciseScreen(
-                                exercise: Exercise(name: '', description: ''))),
-                      );
-                    },
+                    onPressed: () => WoltAddExercise.show(context, ref)
                   )
                 ],
               ),
