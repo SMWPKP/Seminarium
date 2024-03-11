@@ -52,7 +52,7 @@ class AddExerciseScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(8.0),
         child: ChoiceChip(
           selected: ref
-              .watch(plansProviderAlias.selectedExercises)
+              .watch(plansProviderAlias.selectedExercisesProvider)
               .contains(Exercise.fromJson({'name': exercise})),
           onSelected: (selected) {
             if (selected) {
@@ -60,7 +60,7 @@ class AddExerciseScreen extends ConsumerWidget {
                   .addExercise(Exercise.fromJson({'name': exercise}));
             } else {
               final index = ref
-                  .read(plansProviderAlias.selectedExercises)
+                  .read(plansProviderAlias.selectedExercisesProvider)
                   .indexWhere((e) => e.name == exercise);
               exercisesNotifier.removeExercise(index);
             }

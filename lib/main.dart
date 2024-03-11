@@ -73,13 +73,11 @@ final goRouter = GoRouter(
               routes: [
                 GoRoute(
                   path: 'day/:day',
+                  parentNavigatorKey: _rootNavigatorKey,
                   builder: (context, state) {
                     final day = int.parse(state.pathParameters['day']!);
                     return PlansDay(
                       day: day,
-                      exercises: [],
-                      dayContent: '',
-                      description: '',
                     );
                   },
                 ),
@@ -117,7 +115,7 @@ final goRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/account',
-              pageBuilder: (context, state) => NoTransitionPage(
+              pageBuilder: (context, state) => const NoTransitionPage(
                 child: Account(),
               ),
             ),
