@@ -1,153 +1,281 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:seminarium/providers/plans_provider.dart';
+import 'package:seminarium/screens/plans/plans_models.dart';
+import 'package:seminarium/widgets/bottom_sheet_plans.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
 final showAllProvider = StateProvider<bool>((ref) => false);
 final pageIndexProvider =
     ChangeNotifierProvider<ValueNotifier<int>>((ref) => ValueNotifier<int>(0));
 final editingExerciseProvider = StateProvider<bool>((ref) => false);
-final selectedExercisesProvider = StateProvider<Set<String>>((ref) => {});
 final exerciseDescriptionProvider = StateProvider<String>((ref) => '');
+final selectedExerciseTypeProvider = StateProvider<String>((ref) => '');
+final selectedExercisesByType =
+    StateProvider<Map<String, List<Exercise>>>((ref) => {});
+final selectedExerciseType = StateProvider<String>((ref) => '');
+
 
 final exerciseDescriptionController = TextEditingController();
+
+final selectedExercisesWithCustomName =
+    StateProvider<Map<String, String>>((ref) => {
+      // Dodaj ćwiczenia z tabeli 2 do mapy
+      'Własne ćwiczenia': ''
+    });
+
+final customNameProvider = StateNotifierProvider<CustomNameNotifier, String>(
+    (ref) => CustomNameNotifier());
+
+class CustomNameNotifier extends StateNotifier<String> {
+  CustomNameNotifier() : super('');
+
+  void update(String newName) {
+    state = newName;
+  }
+}
 
 class WoltAddExercise extends ConsumerWidget {
   const WoltAddExercise({Key? key}) : super(key: key);
 
-  static void show(BuildContext context, WidgetRef ref, String userId, int day) {
+  static void show(
+      BuildContext context, WidgetRef ref, String userId, int day) {
     const double _pageBreakpoint = 768.0;
 
-    final _exercisesList = [
-      'Przysiady ze sztangą (Squats)',
-      'Martwy ciąg (Deadlift)',
-      'Wyciskanie sztangi leżąc (Bench Press)',
-      'Podciąganie na drążku (Pull-Ups)',
-      'Wiosłowanie sztangą w opadzie (Bent-Over Barbell Row)',
-      'Wyciskanie hantli leżąc (Dumbbell Bench Press)',
-      'Wiosłowanie hantlą w opadzie (Dumbbell Bent-Over Row)',
-      'Wyciskanie sztangi nad głowę (Overhead Press)',
-      'Podciąganie sztangi w opadzie (Barbell Pulldown)',
-      'Przyciąganie sztangi do klatki (Barbell Row)',
-      'Uginanie nóg w leżeniu (Leg Curl)',
-      'Prostowanie nóg w siadzie (Leg Extension)',
-      'Wypychanie hantli na suficie (Triceps Pushdown)',
-      'Uginanie przedramion ze sztangą (Barbell Curl)',
-      'Uginanie przedramion z hantlą (Dumbbell Curl)',
-      'Rozpiętki hantlami leżąc (Dumbbell Flyes)',
-      'Wznosy hantli bokiem w opadzie (Dumbbell Lateral Raise)',
-      'Skłony tułowia w opadzie ze sztangą (Barbell Good Morning)',
-      'Hip Thrust',
-      'Mountain Climbers'
-    ];
-
-    _exercisesList.sort((a, b) => a.compareTo(b));
-
-    final showAll = ref.watch(showAllProvider);
-
-    Widget _buildExercisesChip(String exerciseName) {
+    Widget _buildExerciseTypeCard(String exerciseType,
+        {String? customName,
+        List<String>? exerciseList}) {
       return Padding(
         padding: const EdgeInsets.all(8.0),
         child: Consumer(
           builder: (context, ref, child) {
             final isSelected =
-                ref.watch(selectedExercisesProvider).contains(exerciseName);
-            return ChoiceChip(
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) {
-                  ref.read(selectedExercisesProvider.notifier).state = {
-                    ...ref.read(selectedExercisesProvider.notifier).state,
-                    exerciseName
-                  };
+                ref.watch(selectedExerciseTypesProvider).contains(exerciseType);
+            return InkWell(
+              onTap: () {
+                if (isSelected) {
+                  ref
+                      .read(selectedExerciseTypesProvider.notifier)
+                      .state
+                      .remove(exerciseType);
                 } else {
-                  ref.read(selectedExercisesProvider.notifier).state = {
-                    ...ref.read(selectedExercisesProvider.notifier).state
-                      ..remove(exerciseName)
+                  ref.read(selectedExerciseTypesProvider.notifier).state = {
+                    ...ref.read(selectedExerciseTypesProvider.notifier).state,
+                    exerciseType
                   };
                 }
+                ref
+                    .read(selectedExerciseTypeProvider.notifier)
+                    .update((state) => state); // Force rebuild
               },
-              label: Text(exerciseName),
-              labelStyle: const TextStyle(color: Colors.black),
+              child: Card(
+                color: isSelected ? Colors.green : null,
+                child: ListTile(
+                  title: Text(customName != null ? customName : exerciseType),
+                  trailing: IconButton(
+                    icon: Icon(Icons.arrow_forward),
+                    onPressed: () async {
+                      if (customName != null) {
+                        ref.read(customNameProvider.notifier).state =
+                            customName;
+                        ref
+                            .read(selectedExercisesWithCustomName.notifier)
+                            .state[exerciseType] = customName;
+                      }
+                      ref
+                          .read(selectedExercisesByType.notifier)
+                          .state[exerciseType]
+                          ?.clear();
+                      final exercises = await ref
+                          .read(plansProvider.notifier)
+                          .showExercisesForList(userId, [exerciseType],
+                              customName ?? exerciseType);
+                      ref
+                          .read(selectedExercisesByType.notifier)
+                          .state[exerciseType] = exercises;
+                      MyBottomSheet(
+                              exercises: ref
+                                      .read(selectedExercisesByType.notifier)
+                                      .state[exerciseType] ??
+                                  [])
+                          .show(context);
+                    },
+                  ),
+                ),
+              ),
             );
           },
         ),
       );
     }
 
-    List<Widget> _buildExercisesChips() {
-      final chips = _exercisesList
-          .map((exercise) => _buildExercisesChip(exercise))
-          .toList();
-      chips.add(
-        ChoiceChip(
-          label: const Text('Dodaj nowe ćwiczenie'),
-          selected: ref.watch(editingExerciseProvider.notifier).state,
-          onSelected: (selected) {
-            ref.read(editingExerciseProvider.notifier).state = selected;
-          },
-          selectedColor: Colors.lightGreen,
-        ),
-      );
-      //currently not used
-      if (showAll) {
-        return chips
-          ..add(
-            TextButton(
-              child: const Text('Pokaż mniej'),
-              onPressed: () {
-                ref.read(showAllProvider.notifier).state = false;
-              },
-            ),
-          );
-      } else {
-        return chips.take(5).toList()
-          ..add(
-            TextButton(
-              child: const Text('Pokaż więcej'),
-              onPressed: () {
-                ref.read(showAllProvider.notifier).state = true;
-              },
-            ),
-          );
-      }
-    }
-
     //code for page 1 (user can select exercises)
     SliverWoltModalSheetPage page1(
         BuildContext modalSheetContext, TextTheme textTheme) {
+      final FirebaseFirestore _firestore = FirebaseFirestore.instance;
       return SliverWoltModalSheetPage(
         mainContentSlivers: [
-          SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 0,
-                mainAxisSpacing: 0,
-                childAspectRatio: 3),
-            delegate: SliverChildBuilderDelegate(
-                (_, index) => _buildExercisesChip(_exercisesList[index]),
-                childCount: _exercisesList.length),
-          ),
-          SliverPadding(
-              padding: const EdgeInsets.all(8.0),
-              sliver: SliverToBoxAdapter(
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: Colors.green,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
+          StreamBuilder<DocumentSnapshot>(
+            stream: _firestore.collection('Exercises').doc('Types').snapshots(),
+            builder: (BuildContext context,
+                AsyncSnapshot<DocumentSnapshot> snapshot) {
+              if (snapshot.hasError) {
+                return const SliverToBoxAdapter(child: Text('Wystąpił błąd'));
+              }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SliverToBoxAdapter(
+                    child: CircularProgressIndicator());
+              }
+              Map<String, dynamic> data =
+                  snapshot.data!.data() as Map<String, dynamic>;
+              List<String> exerciseTypes = data.keys.toList();
+              exerciseTypes.add('Własne ćwiczenia');
+              return SliverFillRemaining(
+                  child: CustomScrollView(
+                slivers: [
+                  SliverGrid(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 0,
+                            mainAxisSpacing: 0,
+                            childAspectRatio: 1),
+                    delegate: SliverChildBuilderDelegate(
+                      (_, index) {
+                        if (exerciseTypes[index] == 'Własne ćwiczenia') {
+                          return InkWell(
+                            onTap: () {
+                              ref.read(pageIndexProvider).value = 3;
+                            },
+                            child: Card(
+                              color: Colors.blue,
+                              child: ListTile(
+                                title: const Text('Własne ćwiczenia'),
+                              ),
+                            ),
+                          );
+                        } else {
+                          return _buildExerciseTypeCard(exerciseTypes[index],);
+                        }
+                      },
+                      childCount: exerciseTypes.length,
                     ),
                   ),
-                  onPressed: () {
-                    final pageIndex = ref.read(pageIndexProvider).value;
-                    if (pageIndex < 1) {
-                      ref.read(pageIndexProvider).value = pageIndex + 1;
-                    }
-                  },
-                  child: const Text('Dalej'),
-                ),
-              )),
+                  SliverToBoxAdapter(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final pageIndex = ref.read(pageIndexProvider).value;
+                        if (pageIndex < 1) {
+                          ref.read(pageIndexProvider).value = pageIndex + 1;
+                        }
+                      },
+                      child: const Text('Dalej'),
+                    ),
+                  )
+                ],
+              ));
+            },
+          ),
+        ],
+        hasSabGradient: false,
+        topBarTitle: Text('Dodaj ćwiczenie', style: textTheme.titleLarge),
+        isTopBarLayerAlwaysVisible: true,
+        trailingNavBarWidget: IconButton(
+          padding: const EdgeInsets.all(16),
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.of(modalSheetContext).pop(),
+        ),
+      );
+    }
+
+    //code for custom list of exercises
+    SliverWoltModalSheetPage pageCustom(
+        BuildContext modalSheetContext, TextTheme textTheme) {
+      final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+      return SliverWoltModalSheetPage(
+        mainContentSlivers: [
+          StreamBuilder<QuerySnapshot>(
+            stream: _firestore
+                .collection('users')
+                .doc(userId)
+                .collection('savedExercises')
+                .snapshots(),
+            builder:
+                (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+              if (snapshot.hasError) {
+                return const SliverToBoxAdapter(child: Text('Wystąpił błąd'));
+              }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SliverToBoxAdapter(
+                    child: CircularProgressIndicator());
+              }
+              List<QueryDocumentSnapshot> exercises = snapshot.data!.docs;
+              return SliverFillRemaining(
+                  child: CustomScrollView(
+                slivers: [
+                  SliverGrid(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 0,
+                            mainAxisSpacing: 0,
+                            childAspectRatio: 1),
+                    delegate: SliverChildBuilderDelegate(
+                      (_, index) {
+                        // Pobieramy dane z dokumentu
+                        Map<String, dynamic> data =
+                            exercises[index].data() as Map<String, dynamic>;
+                        // Pobieramy listę ćwiczeń z danych
+                        List<String> exerciseList =
+                            List<String>.from(data.values.first);
+                        //Pobieramy customName z danych
+                        String customName = data['customName'];
+                        // Wybieramy losowe ćwiczenie z listy
+                        String randomExercise = (exerciseList..shuffle()).first;
+                        // Budujemy kartę z losowym ćwiczeniem
+                        return _buildExerciseTypeCard(randomExercise,
+                            customName: customName, exerciseList: exerciseList,);
+                      },
+                      childCount: exercises.length,
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final pageIndex = ref.read(pageIndexProvider).value;
+                        if (pageIndex > 1) {
+                          ref.read(pageIndexProvider).value = 1;
+                        }
+                      },
+                      child: const Text('Dalej'),
+                    ),
+                  ),
+                  SliverPadding(
+                      padding: const EdgeInsets.all(8.0),
+                      sliver: SliverToBoxAdapter(
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.green,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(8)),
+                            ),
+                          ),
+                          onPressed: () {
+                            final pageIndex = ref.read(pageIndexProvider).value;
+                            if (pageIndex > 0) {
+                              ref.read(pageIndexProvider).value = 0;
+                            }
+                          },
+                          child: const Text('Wstecz'),
+                        ),
+                      )),
+                ],
+              ));
+            },
+          ),
         ],
         hasSabGradient: false,
         topBarTitle: Text('Dodaj ćwiczenie', style: textTheme.titleLarge),
@@ -246,14 +374,24 @@ class WoltAddExercise extends ConsumerWidget {
             child: Consumer(
               builder: (context, ref, child) {
                 final selectedExercises =
-                    ref.watch(selectedExercisesProvider.notifier).state;
+                    ref.watch(selectedExerciseTypesProvider.notifier).state;
                 final exerciseDescription =
                     ref.watch(exerciseDescriptionProvider.notifier).state;
                 return Column(
                   children: [
-                    ...selectedExercises
-                        .map((exercise) => Chip(label: Text(exercise)))
-                        .toList(),
+...selectedExercises
+    .map((exercise) => _buildExerciseTypeCard(
+          exercise,
+          customName: ref
+                  .read(selectedExercisesWithCustomName.notifier)
+                  .state
+                  .containsKey(exercise)
+              ? ref
+                  .read(selectedExercisesWithCustomName.notifier)
+                  .state[exercise]
+              : null,
+        ))
+    .toList(),
                     SizedBox(height: 16),
                     if (exerciseDescription != null &&
                         exerciseDescription.isNotEmpty)
@@ -263,9 +401,11 @@ class WoltAddExercise extends ConsumerWidget {
                           border: Border.all(color: Colors.black),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(exerciseDescription,
-                            style: TextStyle(fontSize: 20)),
-                      )
+                        child: Text(
+                          exerciseDescription,
+                          style: TextStyle(fontSize: 20),
+                        ),
+                      ),
                   ],
                 );
               },
@@ -283,8 +423,16 @@ class WoltAddExercise extends ConsumerWidget {
                     ),
                   ),
                   onPressed: () async {
-                    final description = ref.read(exerciseDescriptionProvider.notifier).state;
-                    await ref.read(plansProvider.notifier).savePlan(userId, day, description);
+                    final description =
+                        ref.read(exerciseDescriptionProvider.notifier).state;
+                    await ref.read(plansProvider.notifier).savePlan(
+                        userId,
+                        day,
+                        description,
+                        ref
+                            .read(selectedExerciseTypesProvider.notifier)
+                            .state
+                            .toList());
                     Navigator.of(context).pop();
                   },
                   child: const Text('Zapisz'),
@@ -331,6 +479,7 @@ class WoltAddExercise extends ConsumerWidget {
           page1(modalSheetContext, textTheme),
           page2(modalSheetContext, textTheme),
           page3(modalSheetContext, textTheme),
+          pageCustom(modalSheetContext, textTheme)
         ];
       },
       modalTypeBuilder: (context) {
@@ -342,10 +491,8 @@ class WoltAddExercise extends ConsumerWidget {
         }
       },
       onModalDismissedWithBarrierTap: () {
-        print('Closed modal sheet with barrier tap');
         Navigator.of(context).pop();
         ref.read(pageIndexProvider).value = 0;
-        print('Reset pageIndex to ${ref.read(pageIndexProvider).value}');
       },
       maxDialogWidth: 560,
       minDialogWidth: 400,

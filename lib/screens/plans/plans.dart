@@ -1,64 +1,73 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:seminarium/providers/plans_provider.dart';
+
+final selectedDateProvider = StateProvider<DateTime?>((ref) => null);
 
 class Plans extends ConsumerStatefulWidget {
-  const Plans({super.key, required this.label, required this.detailsPath});
-
-  final String label;
-  final String detailsPath;
+  const Plans({super.key});
 
   @override
-  _PlansState createState() => _PlansState();
-
-  static of(BuildContext context) {}
+  ConsumerState<ConsumerStatefulWidget> createState() => _PlansState();
 }
 
-final plansProvider = StateNotifierProvider<PlansProvider, PlansState>(
-    (ref) => PlansProvider(PlansState(), ref));
-
 class _PlansState extends ConsumerState<Plans> {
-  final dateNow = DateTime.now();
+  DateTime dateNow = DateTime.now();
+
+   int getDaysInMonth(int month, int year) {
+    return month == 2
+        ? (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) ? 29 : 28
+        : (month == 4 || month == 6 || month == 9 || month == 11) ? 30 : 31;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final plansData = ref.watch(plansProvider);
-    final notes = ref.watch(plansProvider.notifier).notes;
-    int howManyDays = 0;
-
-    if ([1, 3, 5, 7, 8, 10, 12].contains(dateNow.month)) {
-      howManyDays = 31;
-    } else if ([4, 6, 9, 11].contains(dateNow.month)) {
-      howManyDays = 30;
-    } else if (dateNow.month == 2) {
-      howManyDays = 28;
-    }
-
-    List<Widget> dateWidget = [];
-    for (int i = 1; i <= howManyDays; i++) {
-      final exercises = plansData.exercises[i] ?? [];
-      final noteExists = notes[i] != null && notes[i]!.isNotEmpty;
-      final dayContent = exercises.isNotEmpty
-          ? 'Ćwiczenia: ${exercises.length}, ${noteExists ? 'dodano notatkę' : ''}'
-          : '';
-      dateWidget.add(Card(
-          child: ListTile(
-              title: Text("Dzień $i"),
-              subtitle: Text(dayContent),
-              trailing: const Icon(Icons.arrow_forward_ios),
-              onTap: () {
-                GoRouter.of(context).go('/plans/day/$i');
-              })));
-    }
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Kalendarz"),
-        backgroundColor: Colors.green,
+        title: const Text('Plany Treningowe'),
+        actions: <Widget>[
+          IconButton(
+          icon: const Icon(Icons.edit_calendar),
+          tooltip: 'Kalendarz',
+          onPressed: () {
+            _selectedDate(context);
+          },
+          )
+        ]
       ),
-      body: ListView(
-        children: dateWidget,
+    body:GridView.builder(
+      itemCount: getDaysInMonth(dateNow.month, dateNow.year),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
       ),
+      itemBuilder: (context, index) {
+        return InkWell(
+          onTap:() {
+            GoRouter.of(context).go('/plans/day/${index + 1}');
+          },
+          child: Card(
+            child: Center(
+              child: Text('Dzień ${index + 1}'),
+            ),
+          ),
+        );
+      },
+    ),
     );
+    
   }
+  Future<void> _selectedDate(BuildContext context) async {
+  final DateTime? picked = await showDatePicker(
+    context: context,
+    initialDate: dateNow,
+    firstDate: DateTime(2015, 8),
+    lastDate: DateTime(2101),
+  );
+  if (picked != null && picked != dateNow) {
+  setState(() {
+    dateNow = picked;
+    ref.read(selectedDateProvider.notifier).state = picked;
+  });
+}
+}
 }

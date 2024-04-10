@@ -29,7 +29,7 @@ final GlobalKey<NavigatorState> _shellNavigatorLoginKey =
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+    options: DefaultFirebaseOptions.currentPlatform
   );
 
   usePathUrlStrategy();
@@ -68,7 +68,7 @@ final goRouter = GoRouter(
             GoRoute(
               path: '/plans',
               pageBuilder: (context, state) => const NoTransitionPage(
-                child: Plans(label: 'Kalendarz', detailsPath: 'plans_details'),
+                child: Plans(),
               ),
               routes: [
                 GoRoute(
