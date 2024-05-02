@@ -11,19 +11,56 @@ final pageIndexProvider =
     ChangeNotifierProvider<ValueNotifier<int>>((ref) => ValueNotifier<int>(0));
 final editingExerciseProvider = StateProvider<bool>((ref) => false);
 final exerciseDescriptionProvider = StateProvider<String>((ref) => '');
-final selectedExerciseTypeProvider = StateProvider<String>((ref) => '');
 final selectedExercisesByType =
     StateProvider<Map<String, List<Exercise>>>((ref) => {});
 final selectedExerciseType = StateProvider<String>((ref) => '');
+final selectedExerciseProvider =
+    StateNotifierProvider<ExerciseNotifier, String>(
+        (ref) => ExerciseNotifier());
 
+class ExerciseNotifier extends StateNotifier<String> {
+  ExerciseNotifier() : super('');
+
+  String? selectedExercise;
+
+  void selectExercise(String exercise) {
+    selectedExercise = exercise;
+    state = exercise;
+  }
+
+  bool isSelected(String exercise) {
+    return selectedExercise == exercise;
+  }
+}
+
+final exerciseTypeProvider =
+    StateNotifierProvider<ExerciseTypeNotifier, String>(
+        (ref) => ExerciseTypeNotifier());
+
+class ExerciseTypeNotifier extends StateNotifier<String> {
+  ExerciseTypeNotifier() : super('');
+
+  String? selectedExerciseType;
+
+  void selectExerciseType(String exerciseType) {
+    if (selectedExerciseType == exerciseType) {
+      // Jeśli użytkownik kliknie na już zaznaczoną kartę, odznaczamy ją.
+      selectedExerciseType = null;
+    } else {
+      // W przeciwnym razie zaznaczamy wybraną kartę i odznaczamy wszystkie inne.
+      selectedExerciseType = exerciseType;
+    }
+    state = selectedExerciseType ?? '';
+  }
+}
 
 final exerciseDescriptionController = TextEditingController();
 
 final selectedExercisesWithCustomName =
     StateProvider<Map<String, String>>((ref) => {
-      // Dodaj ćwiczenia z tabeli 2 do mapy
-      'Własne ćwiczenia': ''
-    });
+          // Dodaj ćwiczenia z tabeli 2 do mapy
+          'Własne ćwiczenia': ''
+        });
 
 final customNameProvider = StateNotifierProvider<CustomNameNotifier, String>(
     (ref) => CustomNameNotifier());
@@ -36,41 +73,35 @@ class CustomNameNotifier extends StateNotifier<String> {
   }
 }
 
+final selectedProvider = StateProvider<String>((ref) => '');
+
 class WoltAddExercise extends ConsumerWidget {
   const WoltAddExercise({Key? key}) : super(key: key);
 
   static void show(
       BuildContext context, WidgetRef ref, String userId, int day) {
     const double _pageBreakpoint = 768.0;
+    
 
     Widget _buildExerciseTypeCard(String exerciseType,
-        {String? customName,
-        List<String>? exerciseList}) {
-      return Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Consumer(
-          builder: (context, ref, child) {
-            final isSelected =
-                ref.watch(selectedExerciseTypesProvider).contains(exerciseType);
-            return InkWell(
+        {String? customName, List<String>? exerciseList}) {
+      return Consumer(
+        builder: (context, watch, child) {
+          final selectedExerciseType =
+              ref.watch(selectedProvider.notifier).state;
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: InkWell(
               onTap: () {
-                if (isSelected) {
-                  ref
-                      .read(selectedExerciseTypesProvider.notifier)
-                      .state
-                      .remove(exerciseType);
-                } else {
-                  ref.read(selectedExerciseTypesProvider.notifier).state = {
-                    ...ref.read(selectedExerciseTypesProvider.notifier).state,
-                    exerciseType
-                  };
-                }
+                ref.read(selectedProvider.notifier).state = exerciseType;
                 ref
-                    .read(selectedExerciseTypeProvider.notifier)
-                    .update((state) => state); // Force rebuild
+                    .read(selectedExerciseProvider.notifier)
+                    .selectExercise(exerciseType);
               },
               child: Card(
-                color: isSelected ? Colors.green : null,
+                key: ValueKey(exerciseType),
+                color:
+                    selectedExerciseType == exerciseType ? Colors.green : null,
                 child: ListTile(
                   title: Text(customName != null ? customName : exerciseType),
                   trailing: IconButton(
@@ -104,9 +135,9 @@ class WoltAddExercise extends ConsumerWidget {
                   ),
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       );
     }
 
@@ -156,7 +187,7 @@ class WoltAddExercise extends ConsumerWidget {
                             ),
                           );
                         } else {
-                          return _buildExerciseTypeCard(exerciseTypes[index],);
+                          return _buildExerciseTypeCard(exerciseTypes[index]);
                         }
                       },
                       childCount: exerciseTypes.length,
@@ -231,11 +262,12 @@ class WoltAddExercise extends ConsumerWidget {
                             List<String>.from(data.values.first);
                         //Pobieramy customName z danych
                         String customName = data['customName'];
-                        // Wybieramy losowe ćwiczenie z listy
-                        String randomExercise = (exerciseList..shuffle()).first;
                         // Budujemy kartę z losowym ćwiczeniem
-                        return _buildExerciseTypeCard(randomExercise,
-                            customName: customName, exerciseList: exerciseList,);
+                        return _buildExerciseTypeCard(
+                          customName,
+                          customName: customName,
+                          exerciseList: exerciseList,
+                        );
                       },
                       childCount: exercises.length,
                     ),
@@ -373,25 +405,18 @@ class WoltAddExercise extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Consumer(
               builder: (context, ref, child) {
-                final selectedExercises =
-                    ref.watch(selectedExerciseTypesProvider.notifier).state;
+                final selectedExercise =
+                    ref.watch(selectedExerciseProvider.notifier).state;
                 final exerciseDescription =
                     ref.watch(exerciseDescriptionProvider.notifier).state;
                 return Column(
                   children: [
-...selectedExercises
-    .map((exercise) => _buildExerciseTypeCard(
-          exercise,
-          customName: ref
-                  .read(selectedExercisesWithCustomName.notifier)
-                  .state
-                  .containsKey(exercise)
-              ? ref
-                  .read(selectedExercisesWithCustomName.notifier)
-                  .state[exercise]
-              : null,
-        ))
-    .toList(),
+                    _buildExerciseTypeCard(
+                      selectedExercise,
+                      customName: ref
+                          .read(selectedExercisesWithCustomName.notifier)
+                          .state[selectedExercise],
+                    ),
                     SizedBox(height: 16),
                     if (exerciseDescription != null &&
                         exerciseDescription.isNotEmpty)
