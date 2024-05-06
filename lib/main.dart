@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:seminarium/navigation/scaffold_with_nested_navigation.dart';
 import 'package:seminarium/screens/account.dart';
 import 'package:go_router/go_router.dart';
+import 'package:seminarium/screens/account/edit_profile_page.dart';
 import 'package:seminarium/screens/chat/chat_page.dart';
 import 'package:seminarium/screens/login_page.dart';
 import 'package:seminarium/screens/messages.dart';
@@ -28,9 +29,7 @@ final GlobalKey<NavigatorState> _shellNavigatorLoginKey =
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   usePathUrlStrategy();
   runApp(
@@ -114,11 +113,19 @@ final goRouter = GoRouter(
           navigatorKey: _shellNavigatorDKey,
           routes: [
             GoRoute(
-              path: '/account',
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: Account(),
-              ),
-            ),
+                path: '/account',
+                pageBuilder: (context, state) => const NoTransitionPage(
+                      child: Account(),
+                    ),
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: 'edit',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => NoTransitionPage(
+                      child: EditProfilePage(),
+                    ),
+                  ),
+                ]),
           ],
         ),
         StatefulShellBranch(
