@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:seminarium/navigation/scaffold_with_navigation_bar.dart';
 import 'package:seminarium/navigation/scaffold_with_navigation_rail.dart';
-import 'package:seminarium/screens/login_page.dart';
+import 'package:seminarium/features/login_page.dart';
 
 class ScaffoldWithNestedNavigation extends StatelessWidget {
   ScaffoldWithNestedNavigation({

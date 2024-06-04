@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:go_router/go_router.dart';
-import 'package:seminarium/screens/chat/message.dart';
+import 'package:seminarium/features/chat/message.dart';
 
 final chatProvider = ChangeNotifierProvider<ChatProvider>((ref) => ChatProvider(ref));
 

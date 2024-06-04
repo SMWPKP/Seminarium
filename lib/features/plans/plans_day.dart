@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:seminarium/providers/plans_provider.dart';
-import 'package:seminarium/screens/plans/wolt_add_exercise_screen.dart';
+import 'package:seminarium/features/plans/wolt_add_exercise_screen.dart';
 
 class PlansDay extends ConsumerStatefulWidget {
   const PlansDay({Key? key, required this.day}) : super(key: key);

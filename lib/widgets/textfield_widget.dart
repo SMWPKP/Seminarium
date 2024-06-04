@@ -29,6 +29,9 @@ class _TextfieldWidgetState extends ConsumerState<TextfieldWidget> {
     super.initState();
 
     controller = TextEditingController(text: widget.text);
+    controller.addListener(() {
+      widget.onChanged(controller.text);
+    });
   }
 
   @override

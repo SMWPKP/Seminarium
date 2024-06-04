@@ -27,7 +27,7 @@ class AuthService {
     }
   }
 
-  Future<bool> register(String email, String password) async {
+  Future<bool> register(String email, String password, String name) async {
     try {
       await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -37,6 +37,7 @@ class AuthService {
       _firestore.collection('users').doc(_auth.currentUser!.uid).set({
         'uid': _auth.currentUser!.uid,
         'email': email,
+        'name': name, // Make sure the name is being saved
       }, SetOptions(merge: true));
 
       return true;
@@ -45,7 +46,6 @@ class AuthService {
       return false;
     }
   }
-
 
   User? get currentUser => _auth.currentUser;
 }

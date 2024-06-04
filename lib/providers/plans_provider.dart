@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:seminarium/screens/plans/plans_models.dart';
+import 'package:seminarium/model/plans_models.dart';
 
 final plansProvider = StateNotifierProvider<PlansProvider, PlansState>(
     (ref) => PlansProvider(PlansState(), ref));

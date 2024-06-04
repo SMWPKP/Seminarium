@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:seminarium/providers/plans_provider.dart';
-import 'package:seminarium/screens/plans/plans_models.dart';
+import 'package:seminarium/model/plans_models.dart';
 import 'package:seminarium/widgets/bottom_sheet_plans.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 

@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:seminarium/screens/home_page.dart';
-import 'package:seminarium/screens/login_page.dart';
+import 'package:seminarium/features/home/home_page.dart';
+import 'package:seminarium/features/login_page.dart';
 
 class LandingPage extends StatelessWidget {
   final FirebaseAuth _auth = FirebaseAuth.instance;

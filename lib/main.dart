@@ -2,17 +2,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:flutter/material.dart';
 import 'package:seminarium/navigation/scaffold_with_nested_navigation.dart';
-import 'package:seminarium/screens/account.dart';
+import 'package:seminarium/features/account/account.dart';
 import 'package:go_router/go_router.dart';
-import 'package:seminarium/screens/account/edit_profile_page.dart';
-import 'package:seminarium/screens/chat/chat_page.dart';
-import 'package:seminarium/screens/login_page.dart';
-import 'package:seminarium/screens/messages.dart';
-import 'package:seminarium/screens/plans/plans.dart';
-import 'package:seminarium/screens/plans/plans_day.dart';
+import 'package:seminarium/features/account/edit_profile_page.dart';
+import 'package:seminarium/features/chat/chat_page.dart';
+import 'package:seminarium/features/login_page.dart';
+import 'package:seminarium/features/chat/messages.dart';
+import 'package:seminarium/features/plans/plans.dart';
+import 'package:seminarium/features/plans/plans_day.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:seminarium/screens/landing_page.dart';
+import 'package:seminarium/features/landing_page.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -26,7 +26,7 @@ final GlobalKey<NavigatorState> _shellNavigatorDKey =
     GlobalKey<NavigatorState>(debugLabel: 'shellD');
 final GlobalKey<NavigatorState> _shellNavigatorLoginKey =
     GlobalKey<NavigatorState>(debugLabel: 'login');
-
+  
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
