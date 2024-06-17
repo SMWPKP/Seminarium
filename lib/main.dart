@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:seminarium/navigation/scaffold_with_nested_navigation.dart';
 import 'package:seminarium/features/account/account.dart';
 import 'package:go_router/go_router.dart';
@@ -14,22 +15,22 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:seminarium/features/landing_page.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey =
-    GlobalKey<NavigatorState>(debugLabel: 'root');
+final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorAKey =
-    GlobalKey<NavigatorState>(debugLabel: 'shellA');
+    GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorBKey =
-    GlobalKey<NavigatorState>(debugLabel: 'shellB');
+    GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorCKey =
-    GlobalKey<NavigatorState>(debugLabel: 'shellC');
+    GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorDKey =
-    GlobalKey<NavigatorState>(debugLabel: 'shellD');
+    GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorLoginKey =
-    GlobalKey<NavigatorState>(debugLabel: 'login');
-  
+    GlobalKey<NavigatorState>();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await initializeDateFormatting('pl', null);
 
   usePathUrlStrategy();
   runApp(
@@ -71,12 +72,15 @@ final goRouter = GoRouter(
               ),
               routes: [
                 GoRoute(
-                  path: 'day/:day',
+                  path: 'day/:year/:month/:day',
                   parentNavigatorKey: _rootNavigatorKey,
                   builder: (context, state) {
+                    final year = int.parse(state.pathParameters['year']!);
+                    final month = int.parse(state.pathParameters['month']!);
                     final day = int.parse(state.pathParameters['day']!);
+                    final initialDate = DateTime(year, month, day);
                     return PlansDay(
-                      day: day,
+                      initialDate: initialDate,
                     );
                   },
                 ),
@@ -101,7 +105,6 @@ final goRouter = GoRouter(
                       receiverUserEmail: state.pathParameters['email']!,
                       receiverUserID: state.pathParameters['id']!,
                       chatId: state.pathParameters['id']!,
-                      hideNavigationBar: true,
                     ),
                   ),
                 ),

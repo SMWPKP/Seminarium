@@ -20,7 +20,7 @@ class MyBottomSheet extends ConsumerStatefulWidget {
   showModalBottomSheet(
     context: context,
     builder: (BuildContext context) {
-      return MyBottomSheet(exercises: [...exercises]); // Tworzymy nową instancję MyBottomSheet z kopią listy ćwiczeń
+      return MyBottomSheet(exercises: [...exercises]);
     },
   );
 }
@@ -65,7 +65,6 @@ class _MyBottomSheetState extends ConsumerState<MyBottomSheet> {
   Future<void> _saveExercise(String customName, bool saveForLater) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
-      // Wyświetl komunikat o błędzie
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Błąd: nie jesteś zalogowany')),
       );

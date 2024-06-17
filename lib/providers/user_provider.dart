@@ -28,12 +28,7 @@ class UserNotifier extends StateNotifier<UserPage> {
         await userCollection.doc(FirebaseAuth.instance.currentUser!.uid).get();
 
     if (userDoc.exists) {
-      print('User data from Firestore: ${userDoc.data()}');
       state = UserPage.fromFirestore(userDoc.data()!);
-      print('Updated state: ${state.name}, ${state.email}');
-    } else {
-      print(
-          'No user data found for uid: ${FirebaseAuth.instance.currentUser!.uid}');
     }
   }
 
@@ -57,10 +52,8 @@ class UserNotifier extends StateNotifier<UserPage> {
           .child('${FirebaseAuth.instance.currentUser!.uid}.png');
       await ref.putFile(File(image.path));
 
-      // Get the download URL
       final url = await ref.getDownloadURL();
 
-      // Update the user
       state = state.copyWith(imagePath: url);
 
       await saveUser(state);

@@ -5,7 +5,8 @@ import 'package:seminarium/providers/chat_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class Messages extends ConsumerWidget {
-  
+  const Messages({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final chatProviderValue = ref.watch(chatProvider.notifier);
@@ -13,30 +14,30 @@ class Messages extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Users'),
+        title: Text('Dostępni użytkownicy'),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('users').snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return CircularProgressIndicator();
 
-           return ListView.builder(
-            itemCount: snapshot.data!.docs.length,
-            itemBuilder: (context, index) {
-              DocumentSnapshot user = snapshot.data!.docs[index];
+          return ListView.builder(
+              itemCount: snapshot.data!.docs.length,
+              itemBuilder: (context, index) {
+                DocumentSnapshot user = snapshot.data!.docs[index];
 
-if(currentUser != null && currentUser.email != user['email']) {
-              return ListTile(
-  title: Text(user['email']), 
-  onTap: () {
-    chatProviderValue.goToChat(context, user.id, user['email']);
-  },
-);
-} else {
-  return SizedBox.shrink();
-}
-            }
-          );
+                if (currentUser != null && currentUser.email != user['email']) {
+                  return ListTile(
+                    title: Text(user['email']),
+                    onTap: () {
+                      chatProviderValue.goToChat(
+                          context, user.id, user['email']);
+                    },
+                  );
+                } else {
+                  return SizedBox.shrink();
+                }
+              });
         },
       ),
     );

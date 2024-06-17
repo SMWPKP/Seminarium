@@ -2,9 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:go_router/go_router.dart';
-import 'package:seminarium/features/chat/message.dart';
+import 'package:seminarium/model/message_models.dart';
 
 final chatProvider = ChangeNotifierProvider<ChatProvider>((ref) => ChatProvider(ref));
 
@@ -15,20 +14,8 @@ class ChatProvider extends ChangeNotifier {
 
   ChatProvider(this.read);
 
-  
-
   void goToChat(BuildContext context, String userId, String userEmail) {
     GoRouter.of(context).go('/messages/chat/$userId/$userEmail',);
-  }
-
-  Future<void> handleMessages() async {
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      // Obsłuż przychodzące wiadomości
-    });
-
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      // Obsłuż wiadomości, które otworzyły aplikację
-    });
   }
 
   Future<void> sendMessage(String receiverId, String message) async {
@@ -46,7 +33,7 @@ class ChatProvider extends ChangeNotifier {
   );
 
   List<String> ids = [  currentUserId, receiverId ];
-  ids.sort(); // there are no duplicates chatrooms
+  ids.sort();
   String chatRoomId = ids.join("_");
 
 _firestore.collection('chat_rooms').doc(chatRoomId).collection('messages').add(newMessage.toMap());
@@ -61,7 +48,7 @@ _firestore.collection('chat_rooms').doc(chatRoomId).collection('messages').add(n
 
 Stream<QuerySnapshot> getMessages(String userId, String otherUserId){
   List<String> ids = [  userId, otherUserId ];
-  ids.sort(); // there are no duplicates chatrooms
+  ids.sort();
   String chatRoomId = ids.join("_");
 
   return _firestore.collection('chat_rooms').doc(chatRoomId).collection('messages').orderBy('timestamp', descending: false).snapshots();

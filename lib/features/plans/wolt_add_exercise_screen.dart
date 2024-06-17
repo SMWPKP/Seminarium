@@ -6,14 +6,11 @@ import 'package:seminarium/model/plans_models.dart';
 import 'package:seminarium/widgets/bottom_sheet_plans.dart';
 import 'package:wolt_modal_sheet/wolt_modal_sheet.dart';
 
-final showAllProvider = StateProvider<bool>((ref) => false);
 final pageIndexProvider =
     ChangeNotifierProvider<ValueNotifier<int>>((ref) => ValueNotifier<int>(0));
-final editingExerciseProvider = StateProvider<bool>((ref) => false);
 final exerciseDescriptionProvider = StateProvider<String>((ref) => '');
 final selectedExercisesByType =
     StateProvider<Map<String, List<Exercise>>>((ref) => {});
-final selectedExerciseType = StateProvider<String>((ref) => '');
 final selectedExerciseProvider =
     StateNotifierProvider<ExerciseNotifier, String>(
         (ref) => ExerciseNotifier());
@@ -21,103 +18,49 @@ final selectedExerciseProvider =
 class ExerciseNotifier extends StateNotifier<String> {
   ExerciseNotifier() : super('');
 
-  String? selectedExercise;
-
   void selectExercise(String exercise) {
-    selectedExercise = exercise;
     state = exercise;
   }
 
   bool isSelected(String exercise) {
-    return selectedExercise == exercise;
-  }
-}
-
-final exerciseTypeProvider =
-    StateNotifierProvider<ExerciseTypeNotifier, String>(
-        (ref) => ExerciseTypeNotifier());
-
-class ExerciseTypeNotifier extends StateNotifier<String> {
-  ExerciseTypeNotifier() : super('');
-
-  String? selectedExerciseType;
-
-  void selectExerciseType(String exerciseType) {
-    if (selectedExerciseType == exerciseType) {
-      // Jeśli użytkownik kliknie na już zaznaczoną kartę, odznaczamy ją.
-      selectedExerciseType = null;
-    } else {
-      // W przeciwnym razie zaznaczamy wybraną kartę i odznaczamy wszystkie inne.
-      selectedExerciseType = exerciseType;
-    }
-    state = selectedExerciseType ?? '';
+    return state == exercise;
   }
 }
 
 final exerciseDescriptionController = TextEditingController();
 
+//Add custom exercises to map
 final selectedExercisesWithCustomName =
-    StateProvider<Map<String, String>>((ref) => {
-          // Dodaj ćwiczenia z tabeli 2 do mapy
-          'Własne ćwiczenia': ''
-        });
-
-final customNameProvider = StateNotifierProvider<CustomNameNotifier, String>(
-    (ref) => CustomNameNotifier());
-
-class CustomNameNotifier extends StateNotifier<String> {
-  CustomNameNotifier() : super('');
-
-  void update(String newName) {
-    state = newName;
-  }
-}
-
-final selectedProvider = StateProvider<String>((ref) => '');
+    StateProvider<Map<String, String>>((ref) => {'Własne ćwiczenia': ''});
 
 class WoltAddExercise extends ConsumerWidget {
   const WoltAddExercise({Key? key}) : super(key: key);
 
-  static void show(
-      BuildContext context, WidgetRef ref, String userId, int day) {
+  static void show(BuildContext context, WidgetRef ref, String userId,
+      DateTime selectedDate) {
     const double _pageBreakpoint = 768.0;
-    
 
     Widget _buildExerciseTypeCard(String exerciseType,
         {String? customName, List<String>? exerciseList}) {
       return Consumer(
-        builder: (context, watch, child) {
-          final selectedExerciseType =
-              ref.watch(selectedProvider.notifier).state;
+        builder: (context, ref, child) {
+          final selectedExercise = ref.watch(selectedExerciseProvider);
           return Padding(
             padding: const EdgeInsets.all(8.0),
             child: InkWell(
               onTap: () {
-                ref.read(selectedProvider.notifier).state = exerciseType;
                 ref
                     .read(selectedExerciseProvider.notifier)
                     .selectExercise(exerciseType);
               },
               child: Card(
                 key: ValueKey(exerciseType),
-                color:
-                    selectedExerciseType == exerciseType ? Colors.green : null,
+                color: selectedExercise == exerciseType ? Colors.green : null,
                 child: ListTile(
                   title: Text(customName != null ? customName : exerciseType),
                   trailing: IconButton(
                     icon: Icon(Icons.arrow_forward),
                     onPressed: () async {
-                      if (customName != null) {
-                        ref.read(customNameProvider.notifier).state =
-                            customName;
-                        ref
-                            .read(selectedExercisesWithCustomName.notifier)
-                            .state[exerciseType] = customName;
-                      }
-                      ref
-                          .read(selectedExercisesByType.notifier)
-                          .state[exerciseType]
-                          ?.clear();
                       final exercises = await ref
                           .read(plansProvider.notifier)
                           .showExercisesForList(userId, [exerciseType],
@@ -254,15 +197,11 @@ class WoltAddExercise extends ConsumerWidget {
                             childAspectRatio: 1),
                     delegate: SliverChildBuilderDelegate(
                       (_, index) {
-                        // Pobieramy dane z dokumentu
                         Map<String, dynamic> data =
                             exercises[index].data() as Map<String, dynamic>;
-                        // Pobieramy listę ćwiczeń z danych
                         List<String> exerciseList =
-                            List<String>.from(data.values.first);
-                        //Pobieramy customName z danych
+                            List<String>.from(data['exercises']);
                         String customName = data['customName'];
-                        // Budujemy kartę z losowym ćwiczeniem
                         return _buildExerciseTypeCard(
                           customName,
                           customName: customName,
@@ -397,7 +336,7 @@ class WoltAddExercise extends ConsumerWidget {
       );
     }
 
-    //code for page 3 (all selected chips and description of exercises)
+    //code for page 3 (Cards and description of exercises)
     SliverWoltModalSheetPage page3(
         BuildContext modalSheetContext, TextTheme textTheme) {
       return SliverWoltModalSheetPage(
@@ -450,19 +389,19 @@ class WoltAddExercise extends ConsumerWidget {
                   onPressed: () async {
                     final description =
                         ref.read(exerciseDescriptionProvider.notifier).state;
+                    final selectedExercises = ref
+                        .read(selectedExerciseTypesProvider.notifier)
+                        .state
+                        .toList();
+
                     await ref.read(plansProvider.notifier).savePlan(
-                        userId,
-                        day,
-                        description,
-                        ref
-                            .read(selectedExerciseTypesProvider.notifier)
-                            .state
-                            .toList());
+                        userId, selectedDate, description, selectedExercises);
                     Navigator.of(context).pop();
                   },
                   child: const Text('Zapisz'),
                 ),
-              )),
+              )
+              ),
           SliverPadding(
               padding: const EdgeInsets.all(8.0),
               sliver: SliverToBoxAdapter(

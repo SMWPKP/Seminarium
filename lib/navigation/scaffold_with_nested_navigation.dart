@@ -10,12 +10,10 @@ class ScaffoldWithNestedNavigation extends StatelessWidget {
     Key? key,
     required this.navigationShell,
     required this.numberOfBranches,
-    this.hideNavigationBar = false,
   }) : super(
             key: key ?? const ValueKey<String>('ScaffoldWithNestedNavigation'));
   final StatefulNavigationShell navigationShell;
   final int numberOfBranches;
-  final bool hideNavigationBar;
 
   void _goBranch(int index) {
     print('Trying to navigate to branch index: $index');
@@ -31,26 +29,24 @@ class ScaffoldWithNestedNavigation extends StatelessWidget {
   }
 
   Widget build(BuildContext context) {
-  return LayoutBuilder(builder: (context, constraints) {
-    if (FirebaseAuth.instance.currentUser != null) {
-       if (constraints.maxWidth < 450) {
-        return ScaffoldWithNavigationBar(
+    return LayoutBuilder(builder: (context, constraints) {
+      if (FirebaseAuth.instance.currentUser != null) {
+        if (constraints.maxWidth < 450) {
+          return ScaffoldWithNavigationBar(
             body: navigationShell,
             selectedIndex: navigationShell.currentIndex,
-            hideNavigationBar: hideNavigationBar, 
             onDestinationSelected: (index) => _goBranch(index),
-                            );
+          );
+        } else {
+          return ScaffoldWithNavigationRail(
+            body: navigationShell,
+            selectedIndex: navigationShell.currentIndex,
+            onDestinationSelected: (index) => _goBranch(index),
+          );
+        }
       } else {
-        return ScaffoldWithNavigationRail(
-          body: navigationShell,
-          selectedIndex: navigationShell.currentIndex,
-          hideNavigationBar: hideNavigationBar,
-          onDestinationSelected: (index) => _goBranch(index),
-        );
+        return LoginPage();
       }
-    } else {
-      return LoginPage();
-    }
-  });
-}
+    });
+  }
 }

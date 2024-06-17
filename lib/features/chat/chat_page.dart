@@ -9,13 +9,14 @@ class ChatPage extends ConsumerWidget {
   final String chatId;
   final String receiverUserEmail;
   final String receiverUserID;
-  final bool hideNavigationBar;
- 
-  ChatPage({required this.receiverUserEmail, required this.receiverUserID, required this.chatId, required this.hideNavigationBar});
+  ChatPage(
+      {super.key,
+      required this.receiverUserEmail,
+      required this.receiverUserID,
+      required this.chatId});
 
   final TextEditingController _messageController = TextEditingController();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -26,82 +27,89 @@ class ChatPage extends ConsumerWidget {
       appBar: AppBar(
         title: Text(receiverUserEmail),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back), // Dodaj przycisk powrotu
+          icon: Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          CircleAvatar(
-            backgroundImage: NetworkImage('https://warsawdog.com/wp-content/uploads/2021/10/akita.jpg'), // Zastąp URL prawdziwym URL awatara
-          ),
-        ],
       ),
       //background
       body: Column(
         children: <Widget>[
           Expanded(
-            child: _buildMessageList(chatProviderValue),          
+            child: _buildMessageList(chatProviderValue),
           ),
           _buildMessageInput(chatProviderValue),
-          const SizedBox(height: 25,),
+          const SizedBox(
+            height: 25,
+          ),
         ],
       ),
     );
   }
 
-Widget _buildMessageInput(ChatProvider chatProviderValue){
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal:25),
-    child: Row(
-      children: [
-        Expanded(child: TextField(
-          controller: _messageController,
-          decoration: const InputDecoration(
-            hintText: 'Type a message',
-          ),
-          obscureText: false,
-        )),
-        IconButton(onPressed: () => chatProviderValue.sendMessageIfNotEmpty(receiverUserID, _messageController.text, _messageController), icon: const Icon(Icons.send)), //scecond _messageController clear text
-      ],
-    ),
-  );
-}
-
-Widget _buildMessageItem(DocumentSnapshot document){
-  Map<String, dynamic> data = document.data() as Map<String, dynamic>;
-
-  var alignment = data['senderId'] == _firebaseAuth.currentUser!.uid ? Alignment.centerRight : Alignment.centerLeft;
-  
-  return Container(
-    alignment: alignment,
-    child: Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        crossAxisAlignment: (data['senderId'] == _firebaseAuth.currentUser!.uid) ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        mainAxisAlignment: (data['senderId'] == _firebaseAuth.currentUser!.uid) ? MainAxisAlignment.end : MainAxisAlignment.start,
+  Widget _buildMessageInput(ChatProvider chatProviderValue) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 25),
+      child: Row(
         children: [
-          Text(data['senderEmail']),
-          const SizedBox(height: 5,),
-          ChatBubble(message: data['message'])
+          Expanded(
+              child: TextField(
+            controller: _messageController,
+            decoration: const InputDecoration(
+              hintText: 'Wpisz wiadomość',
+            ),
+            obscureText: false,
+          )),
+          IconButton(
+              onPressed: () => chatProviderValue.sendMessageIfNotEmpty(
+                  receiverUserID, _messageController.text, _messageController),
+              icon: const Icon(
+                  Icons.send)), //scecond _messageController clear text
         ],
       ),
-    )
-  );
-}
-
-Widget _buildMessageList(ChatProvider chatProvider){
-  return StreamBuilder(stream: chatProvider.getMessages(receiverUserID, _firebaseAuth.currentUser!.uid),
-  builder: (context, snapshot){
-    if(snapshot.hasError){
-      return Text('Error' + snapshot.error.toString());
-    }
-
-    if(snapshot.connectionState == ConnectionState.waiting){
-      return const Text('Loading chat...');
-    }
-
-    return ListView(children: snapshot.data!.docs.map((document) => _buildMessageItem(document)).toList(),);
+    );
   }
-  );
-}
 
+  Widget _buildMessageItem(DocumentSnapshot document) {
+    Map<String, dynamic> data = document.data() as Map<String, dynamic>;
+
+    var isSentByMe = data['senderId'] == _firebaseAuth.currentUser!.uid;
+
+    return Container(
+        alignment: isSentByMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            crossAxisAlignment: isSentByMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            mainAxisAlignment: isSentByMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            children: [
+              Text(data['senderEmail']),
+              const SizedBox(
+                height: 5,
+              ),
+              ChatBubble(message: data['message'], isSentByMe: isSentByMe),
+            ],
+          ),
+        ));
+  }
+
+  Widget _buildMessageList(ChatProvider chatProvider) {
+    return StreamBuilder(
+        stream: chatProvider.getMessages(
+            receiverUserID, _firebaseAuth.currentUser!.uid),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Text('Error' + snapshot.error.toString());
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Text('Ładowanie chatu...');
+          }
+
+          return ListView(
+            children: snapshot.data!.docs
+                .map((document) => _buildMessageItem(document))
+                .toList(),
+          );
+        });
+  }
 }

@@ -22,7 +22,6 @@ class AuthService {
 
       return true;
     } on FirebaseAuthException catch (e) {
-      // Handle exceptions
       return false;
     }
   }
@@ -37,12 +36,11 @@ class AuthService {
       _firestore.collection('users').doc(_auth.currentUser!.uid).set({
         'uid': _auth.currentUser!.uid,
         'email': email,
-        'name': name, // Make sure the name is being saved
+        'name': name,
       }, SetOptions(merge: true));
 
       return true;
     } on FirebaseAuthException catch (e) {
-      // Handle exceptions
       return false;
     }
   }

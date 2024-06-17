@@ -16,10 +16,3 @@ class Exercise {
     );
   }
 }
-
-class User {
-  final String uid;
-  final List<Exercise> exercises;
-
-  User({required this.uid, required this.exercises});
-}

@@ -1,71 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:seminarium/model/plans_models.dart';
+import 'package:intl/intl.dart';
 
 final plansProvider = StateNotifierProvider<PlansProvider, PlansState>(
     (ref) => PlansProvider(PlansState(), ref));
 final selectedExercisesProvider = StateProvider<List<Exercise>>((ref) => []);
 final selectedExerciseTypesProvider = StateProvider<Set<String>>((ref) => {});
-final exerciseTypesProvider =
-    StateProvider<Map<String, List<String>>>((ref) => {});
 
 class PlansProvider extends StateNotifier<PlansState> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final Map<int, String> descriptions = {};
-  final Map<int, List<String>> exercises = {};
   final StateNotifierProviderRef<PlansProvider, PlansState> ref;
 
-  PlansProvider(PlansState state, this.ref) : super(state) {
-    _init();
-  }
-
-  Future<void> _init() async {
-    // Nasłuchuj zmian w Firebase
-    _firestore.collection('plans').snapshots().listen((snapshot) {
-      // Aktualizuj stan
-      state = PlansState.fromSnapshot(snapshot);
-    });
-  }
-
-  Future<void> loadExerciseTypes() async {
-    DocumentSnapshot doc =
-        await _firestore.collection('Exercises').doc('Types').get();
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-
-    Map<String, List<String>> exerciseTypes = {};
-
-    data.forEach((key, value) {
-      if (value is List<dynamic>) {
-        exerciseTypes[key] = List<String>.from(value);
-      }
-    });
-
-    // Aktualizuj provider z typami ćwiczeń
-    ref.read(exerciseTypesProvider.notifier).state = exerciseTypes;
-  }
-
-  Future<List<Exercise>> showExercisesForType(String exerciseType) async {
-    DocumentSnapshot doc =
-        await _firestore.collection('Exercises').doc('Types').get();
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-
-    List<String> exerciseNames = [];
-    if (data.containsKey(exerciseType)) {
-      exerciseNames = List<String>.from(data[exerciseType]);
-    }
-
-    List<Exercise> exercises =
-        exerciseNames.map((name) => Exercise(name: name)).toList();
-    ref.read(selectedExercisesProvider.notifier).state = exercises;
-
-    return exercises;
-  }
+  PlansProvider(PlansState state, this.ref) : super(state);
 
   Future<List<Exercise>> showExercisesForList(
       String userId, List<String> exerciseList, String selectedList) async {
     List<Exercise> exercises = [];
 
-    // Pobieranie ćwiczeń z Exercises/Types
     DocumentSnapshot doc =
         await _firestore.collection('Exercises').doc('Types').get();
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
@@ -78,7 +30,7 @@ class PlansProvider extends StateNotifier<PlansState> {
       }
     });
 
-    // Pobieranie ćwiczeń z users/uid/savedExercises
+    //Get users/uid/savedExercises
     QuerySnapshot userExercisesSnapshot = await _firestore
         .collection('users')
         .doc(userId)
@@ -86,36 +38,34 @@ class PlansProvider extends StateNotifier<PlansState> {
         .get();
 
     userExercisesSnapshot.docs.forEach((doc) {
-  Map<String, dynamic> userData = doc.data() as Map<String, dynamic>;
-  if (userData['customName'] == selectedList && userData.containsKey('exercises')) {
-    List<String> userExerciseNames = List<String>.from(userData['exercises']);
-    exercises.addAll(userExerciseNames.map((name) => Exercise(name: name)).toList());
-  }
-});
+      Map<String, dynamic> userData = doc.data() as Map<String, dynamic>;
+      if (userData['customName'] == selectedList &&
+          userData.containsKey('exercises')) {
+        List<String> userExerciseNames =
+            List<String>.from(userData['exercises']);
+        exercises.addAll(
+            userExerciseNames.map((name) => Exercise(name: name)).toList());
+      }
+    });
 
     ref.read(selectedExercisesProvider.notifier).state = exercises;
 
     return exercises;
   }
 
-  Future<void> savePlan(String userId, int day, String description,
+  Future<void> savePlan(String userId, DateTime date, String description,
       List<String> exercisesForTheDay) async {
-    final newDescriptions = Map.of(state.descriptions);
-    final newExercises = Map.of(state.exercises);
-
-    newDescriptions[day] = description;
-    // Jeśli użytkownik nie dokonał żadnych zmian, użyj domyślnego zestawu ćwiczeń
-    newExercises[day] = exercisesForTheDay.isEmpty
-        ? await getDefaultExercises()
-        : exercisesForTheDay;
+    final dateFormat = DateFormat('ddMMyyyy');
+    final dateString = dateFormat.format(date);
 
     await FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
-        .collection('exercises')
-        .add({
-      'date': day.toString(),
-      'exercises': newExercises[day],
+        .collection('days')
+        .doc(dateString)
+        .set({
+      'date': dateString,
+      'exercises': exercisesForTheDay,
       'description': description,
       'selectedExercises': ref
           .read(selectedExercisesProvider.notifier)
@@ -125,33 +75,31 @@ class PlansProvider extends StateNotifier<PlansState> {
     });
   }
 
-  Future<List<String>> getDefaultExercises() async {
-    final doc = await FirebaseFirestore.instance
-        .collection('Exercises')
-        .doc('Types')
-        .get();
-    return List<String>.from(doc.data()?['exercises'] ?? []);
-  }
-
-  Future<List<String>> getExercisesForDay(String userId, int day) async {
+  Future<void> loadPlanForDay(String userId, DateTime date) async {
+    final dateFormat = DateFormat('ddMMyyyy');
+    final dateString = dateFormat.format(date);
     final doc = await FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
-        .collection('exercises')
-        .doc(day.toString())
+        .collection('days')
+        .doc(dateString)
         .get();
-    return List<String>.from(doc.data()?['exercises'] ?? []);
-  }
 
-  Future<List<String>> getSavedExercises(String userId) async {
-    final snapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('savedExercises')
-        .get();
-    return snapshot.docs
-        .map((doc) => doc.data()['customName'] as String)
-        .toList();
+    if (doc.exists) {
+      Map<String, dynamic> data = doc.data()!;
+      final exercises = List<String>.from(data['selectedExercises']);
+      final description = data['description'];
+
+      state = state.copyWith(
+        exercises: {dateString: exercises},
+        descriptions: {dateString: description},
+      );
+    } else {
+      state = state.copyWith(
+        exercises: {dateString: []},
+        descriptions: {dateString: ''},
+      );
+    }
   }
 
   Future<void> saveEditedExerciseList(
@@ -168,27 +116,21 @@ class PlansProvider extends StateNotifier<PlansState> {
 }
 
 class PlansState {
-  final Map<int, String> descriptions;
-  final Map<int, List<String>> exercises;
+  final Map<String, String> descriptions;
+  final Map<String, List<String>> exercises;
 
   PlansState({
     this.descriptions = const {},
     this.exercises = const {},
   });
 
-  factory PlansState.fromSnapshot(QuerySnapshot snapshot) {
-    final data = snapshot.docs.first.data();
-    if (data != null && data is Map<String, dynamic>) {
-      return PlansState(
-        descriptions: Map<int, String>.from(
-            data['descriptions'] as Map<String, dynamic> ?? {}),
-        exercises: Map<int, List<String>>.from(
-            (data['exercises'] as Map<String, dynamic> ?? {}).map(
-                (key, value) => MapEntry(int.parse(key),
-                    List<String>.from(value as List<dynamic>)))),
-      );
-    } else {
-      return PlansState();
-    }
+  PlansState copyWith({
+    Map<String, String>? descriptions,
+    Map<String, List<String>>? exercises,
+  }) {
+    return PlansState(
+      descriptions: descriptions ?? this.descriptions,
+      exercises: exercises ?? this.exercises,
+    );
   }
 }

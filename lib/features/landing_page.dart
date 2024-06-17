@@ -16,7 +16,7 @@ class LandingPage extends StatelessWidget {
           if (user == null) {
             return LoginPage();
           }
-          return HomePage(label: 'Home', detailsPath: '/a/details');
+          return HomePage();
         }
         return Scaffold(
           body: Center(
